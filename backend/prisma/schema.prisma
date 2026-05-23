@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  role         Role     @default(USER)
+  points       Int      @default(0)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  pointTransactions PointTransaction[]
+  analysisHistory   AnalysisHistory[]
+
+  @@map("users")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model PointTransaction {
+  id        String          @id @default(cuid())
+  userId    String          @map("user_id")
+  amount    Int
+  type      TransactionType
+  reason    String
+  createdBy String          @map("created_by")
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("point_transactions")
+}
+
+enum TransactionType {
+  GRANT
+  REVOKE
+  USAGE
+}
+
+model AnalysisHistory {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  timeframe      String
+  ohlcData       Json     @map("ohlc_data")
+  aiResponse     String   @map("ai_response") @db.Text
+  hasEntry       Boolean  @default(false) @map("has_entry")
+  entry          Float?
+  stopLoss       Float?   @map("stop_loss")
+  takeProfit     Float?   @map("take_profit")
+  pointsDeducted Int      @default(0) @map("points_deducted")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("analysis_history")
+}
+
+model AIConfig {
+  id                String   @id @default(cuid())
+  systemInstruction Json     @map("system_instruction")
+  promptTemplate    String   @map("prompt_template") @db.Text
+  responseFormat    Json     @map("response_format")
+  isActive          Boolean  @default(true) @map("is_active")
+  updatedBy         String   @map("updated_by")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("ai_configs")
+}
