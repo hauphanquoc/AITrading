@@ -83,14 +83,14 @@
 
 ---
 
-## Phase 6: Landing Page (Day 19-20) ⬜
+## Phase 6: Landing Page (Day 19-20) ✅
 
-- [ ] **6.1** Landing page design (Hero, Features, CTA)
-- [ ] **6.2** Login page on landing
+- [x] **6.1** Landing page design (Hero, Features, CTA)
+- [x] **6.2** Login page on landing
 
-### Checkpoint 6
-- [ ] Landing responsive
-- [ ] Login redirects
+### Checkpoint 6 ✅
+- [x] Landing responsive
+- [x] Login redirects
 
 ---
 
@@ -115,9 +115,9 @@
 | Phase 3: MT5 | 3/3 | ✅ Complete |
 | Phase 4: User UI | 6/7 | ✅ Complete |
 | Phase 5: Admin UI | 5/6 | ✅ Complete |
-| Phase 6: Landing | 0/2 | ⬜ Not started |
+| Phase 6: Landing | 2/2 | ✅ Complete |
 | Phase 7: Deploy | 0/2 | ⬜ Not started |
-| **Total** | **26/32** | **~81% complete** |
+| **Total** | **28/32** | **~88% complete** |
 
 ---
 
@@ -125,6 +125,7 @@
 
 | Service | Port | Command |
 |---------|------|---------|
+| Landing Page | 3000 | `cd landing && npm run dev` |
 | User Dashboard | 5173 | `cd dashboard && npm run dev` |
 | Admin Dashboard | 5174 | `cd admin && npm run dev` |
 | Backend API | 3001 | `cd backend && npm run dev` |
@@ -143,8 +144,8 @@
 
 > Update this section as you work
 
-**Working on**: Phase 6 - Landing Page
+**Working on**: Phase 7 - Polish & Deploy
 
 **Blocked by**: None
 
-**Next up**: Task 6.1 - Landing page design
+**Next up**: Task 7.1 - Testing & bug fixes
