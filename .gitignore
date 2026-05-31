@@ -38,3 +38,21 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+
+# Next.js
+.next/
+out/
+
+# Prisma
+*.db
+*.db-journal

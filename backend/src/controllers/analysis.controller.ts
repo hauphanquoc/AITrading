@@ -45,7 +45,7 @@ export const analysisController = {
   },
 
   async getById(req: Request, res: Response) {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const userId = req.user!.userId;
 
     const analysis = await analysisService.getById(userId, id);

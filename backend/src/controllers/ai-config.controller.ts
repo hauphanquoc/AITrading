@@ -23,7 +23,7 @@ class AIConfigController {
   }
 
   async getConfigById(req: Request, res: Response) {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const config = await aiConfigService.getConfigById(id);
 
     res.json({
@@ -50,7 +50,7 @@ class AIConfigController {
   }
 
   async updateConfig(req: Request, res: Response) {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const parsed = updateAIConfigSchema.safeParse(req.body);
 
     if (!parsed.success) {
@@ -68,7 +68,7 @@ class AIConfigController {
   }
 
   async deleteConfig(req: Request, res: Response) {
-    const { id } = req.params;
+    const id = req.params.id as string;
     await aiConfigService.deleteConfig(id);
 
     res.json({
@@ -78,7 +78,7 @@ class AIConfigController {
   }
 
   async setActiveConfig(req: Request, res: Response) {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const adminId = req.user!.userId;
     const config = await aiConfigService.setActiveConfig(id, adminId);
 

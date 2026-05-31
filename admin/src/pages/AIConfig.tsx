@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
@@ -22,11 +22,6 @@ interface AIConfig {
 interface ConfigsResponse {
   success: boolean;
   data: AIConfig[];
-}
-
-interface ConfigResponse {
-  success: boolean;
-  data: AIConfig;
 }
 
 const DEFAULT_SYSTEM_INSTRUCTION = `Bạn là chuyên gia phân tích kỹ thuật vàng (XAUUSD) với hơn 10 năm kinh nghiệm. Nhiệm vụ của bạn là phân tích dữ liệu OHLC và đưa ra khuyến nghị giao dịch chính xác.
@@ -55,22 +50,6 @@ Nếu có entry, trả về theo format:
 - Tỷ lệ R:R: [risk reward ratio]
 
 Nếu không có entry phù hợp, giải thích lý do và khuyến nghị chờ đợi.`;
-
-const DEFAULT_RESPONSE_FORMAT = {
-  type: 'json',
-  schema: {
-    analysis: 'string',
-    trend: 'string',
-    support_levels: 'array',
-    resistance_levels: 'array',
-    has_entry: 'boolean',
-    entry: 'number|null',
-    stop_loss: 'number|null',
-    take_profit: 'number|null',
-    risk_reward: 'number|null',
-    confidence: 'number',
-  },
-};
 
 export function AIConfigPage() {
   const queryClient = useQueryClient();
