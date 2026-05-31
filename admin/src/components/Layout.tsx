@@ -6,6 +6,7 @@ const navItems = [
   { to: '/users', label: 'Users', icon: '👥' },
   { to: '/points', label: 'Points', icon: '💰' },
   { to: '/ai-config', label: 'AI Config', icon: '🤖' },
+  { to: '/history', label: 'API History', icon: '📜' },
 ];
 
 export function Layout() {

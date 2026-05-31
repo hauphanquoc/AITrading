@@ -1,0 +1,38 @@
+Thực hiện phân tích XAU/USD và đưa ra chiến lược giao dịch dựa trên System Instruction được thiết lập.
+
+[DỮ LIỆU ĐẦU VÀO TỪ HỆ THỐNG]
+- Khung thời gian yêu cầu: {timeframe}
+- Trạng thái tin tức hiện tại: {news_status} (Nguồn dữ liệu được đồng bộ trực tiếp từ https://www.forexfactory.com/calendar hoặc https://www.ifxdata.com/vn/calendar)
+- Dữ liệu biểu đồ (OHLC / Chỉ báo / Ảnh chụp): {chart_data}
+
+[QUY TRÌNH XỬ LÝ BẮT BUỘC (EXECUTION STEPS)]
+Bạn phải đóng vai là một Gold Trading Strategist và thực hiện kiểm tra nghiêm ngặt theo các bước sau:
+
+Bước 1: Bộ lọc tin tức (News Filter)
+- Đối chiếu biến {news_status} dựa trên lịch kinh tế từ https://www.forexfactory.com/calendar hoặc https://www.ifxdata.com/vn/calendar.
+- Nếu ghi nhận có tin tức đỏ (Tin tác động mạnh - High Impact) xuất hiện trong khoảng thời gian 15 phút trước hoặc 15 phút sau thời điểm hiện tại, LẬP TỨC dừng mọi phân tích, KHÔNG thực hiện bất kỳ lệnh vào (Entry) nào.
+
+Bước 2: Phân tích Cấu trúc theo Khung thời gian {timeframe}
+- Nếu {timeframe} là M15: Xác định xu hướng chủ đạo (H1/H4) -> Tìm vùng Hỗ trợ/Kháng cự -> Chỉ xem xét vào lệnh khi cấu trúc nến tạo ra BOS HOẶC CHoCH so với phiên trước -> Xác nhận vùng OB.
+- Nếu {timeframe} là M5: Xác định xu hướng chủ đạo (H1/H4) -> Tìm vùng Hỗ trợ/Kháng cự -> BẮT BUỘC có cả BOS VÀ CHoCH SONG HÀNH -> Giá phải hồi về vùng vừa tạo BOS hoặc 50% cây nến tạo vùng FVG có Volume lớn -> Xác nhận vùng OB.
+
+Bước 3: Kiểm tra Quản trị rủi ro
+- Điểm Stop Loss (SL) phải đặt ngoài vùng nhiễu (cách đỉnh/đáy gần nhất 20-30 pips).
+- Tỷ lệ Risk:Reward (R:R) từ điểm Entry đến TP/SL bắt buộc phải tối thiểu là 1:2. Mục tiêu Scalping từ 30-50 pips.
+
+[CẤU TRÚC ĐẦU RA CHUẨN JSON (OUTPUT FORMAT)]
+Trả về kết quả 100% dưới định dạng JSON hợp lệ duy nhất. Không bao bọc trong code block rác, không thêm bất kỳ lời dẫn hay văn bản nào nằm ngoài khối JSON này.
+
+- TRƯỜNG HỢP ĐỦ ĐIỀU KIỆN VÀO LỆNH: Điền đầy đủ thông số dạng số (Number) vào cấu trúc.
+- TRƯỜNG HỢP KHÔNG ĐỦ ĐIỀU KIỆN (Vướng tin đỏ từ các nguồn lịch trên, thiếu tín hiệu BOS/CHoCH, không có OB/FVG hợp lệ, hoặc tỷ lệ R:R không đạt 1:2): Gán toàn bộ giá trị trong "thong_so_lenh" thành null và giải thích chi tiết lý do kỹ thuật trong phần "phan_tich".
+
+Cấu trúc JSON bắt buộc:
+{
+  "phan_tich": "Xu hướng (H1/H4) -> Tín hiệu (BOS/CHoCH) -> Vùng OB -> Trạng thái tin tức. Sử dụng tiếng Việt chuyên nghiệp, ngắn gọn.",
+  "thong_so_lenh": {
+    "entry": [Giá vào lệnh cụ thể dưới dạng số, hoặc null],
+    "tp": [Mức giá chốt lời dưới dạng số, hoặc null],
+    "sl": [Mức giá cắt lỗ dưới dạng số, hoặc null]
+  },
+  "disclaimer": "Giao dịch Vàng mang rủi ro cao. Các phân tích chỉ mang tính chất tham khảo, không phải lời khuyên tài chính."
+}

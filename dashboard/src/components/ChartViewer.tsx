@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { createChart, CandlestickSeries } from 'lightweight-charts';
-import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
+import type { IChartApi, ISeriesApi, UTCTimestamp, IPriceLine } from 'lightweight-charts';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
@@ -24,15 +24,25 @@ interface CandlestickDataPoint {
   close: number;
 }
 
+interface TradeLevels {
+  entry: number | null;
+  stopLoss: number | null;
+  takeProfit: number | null;
+}
+
 interface ChartViewerProps {
   selectedTimeframe: Timeframe;
   onTimeframeChange: (tf: Timeframe) => void;
+  tradeLevels?: TradeLevels;
 }
 
-export function ChartViewer({ selectedTimeframe, onTimeframeChange }: ChartViewerProps) {
+export function ChartViewer({ selectedTimeframe, onTimeframeChange, tradeLevels }: ChartViewerProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const entryLineRef = useRef<IPriceLine | null>(null);
+  const slLineRef = useRef<IPriceLine | null>(null);
+  const tpLineRef = useRef<IPriceLine | null>(null);
 
   const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['ohlc', selectedTimeframe],
@@ -112,6 +122,59 @@ export function ChartViewer({ selectedTimeframe, onTimeframeChange }: ChartViewe
       chartRef.current?.timeScale().fitContent();
     }
   }, [data]);
+
+  // Update price lines when tradeLevels change
+  useEffect(() => {
+    if (!seriesRef.current) return;
+
+    // Remove existing lines
+    if (entryLineRef.current) {
+      seriesRef.current.removePriceLine(entryLineRef.current);
+      entryLineRef.current = null;
+    }
+    if (slLineRef.current) {
+      seriesRef.current.removePriceLine(slLineRef.current);
+      slLineRef.current = null;
+    }
+    if (tpLineRef.current) {
+      seriesRef.current.removePriceLine(tpLineRef.current);
+      tpLineRef.current = null;
+    }
+
+    // Create new lines if values exist
+    if (tradeLevels?.entry) {
+      entryLineRef.current = seriesRef.current.createPriceLine({
+        price: tradeLevels.entry,
+        color: '#3b82f6',
+        lineWidth: 2,
+        lineStyle: 0,
+        axisLabelVisible: true,
+        title: 'Entry',
+      });
+    }
+
+    if (tradeLevels?.stopLoss) {
+      slLineRef.current = seriesRef.current.createPriceLine({
+        price: tradeLevels.stopLoss,
+        color: '#ef4444',
+        lineWidth: 2,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: 'SL',
+      });
+    }
+
+    if (tradeLevels?.takeProfit) {
+      tpLineRef.current = seriesRef.current.createPriceLine({
+        price: tradeLevels.takeProfit,
+        color: '#22c55e',
+        lineWidth: 2,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: 'TP',
+      });
+    }
+  }, [tradeLevels]);
 
   return (
     <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">

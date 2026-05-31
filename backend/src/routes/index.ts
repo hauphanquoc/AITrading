@@ -5,6 +5,7 @@ import pointRoutes from './point.routes.js';
 import aiConfigRoutes from './ai-config.routes.js';
 import analysisRoutes from './analysis.routes.js';
 import chartRoutes from './chart.routes.js';
+import logRoutes from './log.routes.js';
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use('/points', pointRoutes);
 router.use('/ai-config', aiConfigRoutes);
 router.use('/analysis', analysisRoutes);
 router.use('/chart', chartRoutes);
+router.use('/logs', logRoutes);
 
 export default router;

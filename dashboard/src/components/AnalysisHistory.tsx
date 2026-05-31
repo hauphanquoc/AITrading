@@ -14,6 +14,22 @@ interface AnalysisItem {
   createdAt: string;
 }
 
+function getTradeDirection(entry: number | null, takeProfit: number | null): 'BUY' | 'SELL' | null {
+  if (!entry || !takeProfit) return null;
+  return takeProfit > entry ? 'BUY' : 'SELL';
+}
+
+function parseAnalysisText(rawText: string): string {
+  try {
+    const jsonMatch = rawText.match(/```json\s*([\s\S]*?)```/);
+    const jsonStr = jsonMatch ? jsonMatch[1].trim() : rawText;
+    const parsed = JSON.parse(jsonStr);
+    return parsed.phan_tich || parsed.analysis || rawText;
+  } catch {
+    return rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+  }
+}
+
 interface HistoryResponse {
   success: boolean;
   data: AnalysisItem[];
@@ -71,18 +87,29 @@ export function AnalysisHistory() {
               className="flex items-center justify-between cursor-pointer"
               onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <span className="px-2 py-1 bg-gray-700 text-gray-300 rounded text-sm font-mono">
                   {item.timeframe}
                 </span>
                 {item.hasEntry ? (
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-green-400">Entry: {item.entry?.toFixed(2)}</span>
-                    <span className="text-gray-500">|</span>
-                    <span className="text-red-400">SL: {item.stopLoss?.toFixed(2)}</span>
-                    <span className="text-gray-500">|</span>
-                    <span className="text-green-400">TP: {item.takeProfit?.toFixed(2)}</span>
-                  </div>
+                  <>
+                    {(() => {
+                      const direction = getTradeDirection(item.entry, item.takeProfit);
+                      const isBuy = direction === 'BUY';
+                      return (
+                        <span className={`px-2 py-1 rounded text-xs font-bold ${isBuy ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+                          {direction}
+                        </span>
+                      );
+                    })()}
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-blue-400">Entry: {item.entry?.toFixed(2)}</span>
+                      <span className="text-gray-500">|</span>
+                      <span className="text-red-400">SL: {item.stopLoss?.toFixed(2)}</span>
+                      <span className="text-gray-500">|</span>
+                      <span className="text-green-400">TP: {item.takeProfit?.toFixed(2)}</span>
+                    </div>
+                  </>
                 ) : (
                   <span className="text-gray-500 text-sm">No entry signal</span>
                 )}
@@ -106,8 +133,8 @@ export function AnalysisHistory() {
 
             {expandedId === item.id && (
               <div className="mt-4 p-3 bg-gray-900 rounded-lg">
-                <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">
-                  {item.aiResponse}
+                <p className="text-sm text-gray-300 leading-relaxed">
+                  {parseAnalysisText(item.aiResponse)}
                 </p>
               </div>
             )}

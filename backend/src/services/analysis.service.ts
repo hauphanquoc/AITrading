@@ -4,6 +4,9 @@ import { prisma } from '../lib/prisma.js';
 import { config } from '../config/index.js';
 import { AppError } from '../utils/app-error.js';
 import { aiConfigService } from './ai-config.service.js';
+import { logger } from '../utils/logger.js';
+import fs from 'fs';
+import path from 'path';
 
 interface OHLCBar {
   time: number;
@@ -88,21 +91,69 @@ function parseAIResponse(responseText: string): ParsedAIResponse {
     takeProfit: null,
   };
 
-  const entryMatch = responseText.match(/Entry[:\s]*(\d+\.?\d*)/i);
-  const slMatch = responseText.match(/(?:Stop Loss|SL)[:\s]*(\d+\.?\d*)/i);
-  const tpMatch = responseText.match(/(?:Take Profit|TP)[:\s]*(\d+\.?\d*)/i);
+  // Try to parse JSON format first (e.g., from structured AI responses)
+  try {
+    // Extract JSON from markdown code blocks if present
+    const jsonMatch = responseText.match(/```json\s*([\s\S]*?)```/);
+    const jsonStr = jsonMatch ? jsonMatch[1].trim() : responseText;
 
-  if (entryMatch) {
-    result.entry = parseFloat(entryMatch[1]);
-    result.hasEntry = true;
+    const parsed = JSON.parse(jsonStr);
+
+    // Handle Vietnamese format: thong_so_lenh.entry/tp/sl
+    if (parsed.thong_so_lenh) {
+      const params = parsed.thong_so_lenh;
+      if (params.entry && Array.isArray(params.entry) && params.entry.length > 0) {
+        result.entry = parseFloat(params.entry[0]);
+        result.hasEntry = true;
+      }
+      if (params.sl && Array.isArray(params.sl) && params.sl.length > 0) {
+        result.stopLoss = parseFloat(params.sl[0]);
+      }
+      if (params.tp && Array.isArray(params.tp) && params.tp.length > 0) {
+        result.takeProfit = parseFloat(params.tp[0]);
+      }
+    }
+
+    // Handle English format: entry/stopLoss/takeProfit at root or nested
+    if (!result.hasEntry) {
+      const entryVal = parsed.entry ?? parsed.Entry;
+      if (entryVal !== undefined && entryVal !== null) {
+        result.entry = Array.isArray(entryVal) ? parseFloat(entryVal[0]) : parseFloat(entryVal);
+        result.hasEntry = !isNaN(result.entry);
+      }
+
+      const slVal = parsed.sl ?? parsed.SL ?? parsed.stopLoss ?? parsed.stop_loss;
+      if (slVal !== undefined && slVal !== null) {
+        result.stopLoss = Array.isArray(slVal) ? parseFloat(slVal[0]) : parseFloat(slVal);
+      }
+
+      const tpVal = parsed.tp ?? parsed.TP ?? parsed.takeProfit ?? parsed.take_profit;
+      if (tpVal !== undefined && tpVal !== null) {
+        result.takeProfit = Array.isArray(tpVal) ? parseFloat(tpVal[0]) : parseFloat(tpVal);
+      }
+    }
+  } catch {
+    // JSON parsing failed, fall back to regex patterns
   }
 
-  if (slMatch) {
-    result.stopLoss = parseFloat(slMatch[1]);
-  }
+  // Fallback: regex-based extraction for text format
+  if (!result.hasEntry) {
+    const entryMatch = responseText.match(/Entry[:\s]*(\d+\.?\d*)/i);
+    const slMatch = responseText.match(/(?:Stop Loss|SL)[:\s]*(\d+\.?\d*)/i);
+    const tpMatch = responseText.match(/(?:Take Profit|TP)[:\s]*(\d+\.?\d*)/i);
 
-  if (tpMatch) {
-    result.takeProfit = parseFloat(tpMatch[1]);
+    if (entryMatch) {
+      result.entry = parseFloat(entryMatch[1]);
+      result.hasEntry = true;
+    }
+
+    if (slMatch) {
+      result.stopLoss = parseFloat(slMatch[1]);
+    }
+
+    if (tpMatch) {
+      result.takeProfit = parseFloat(tpMatch[1]);
+    }
   }
 
   return result;
@@ -115,7 +166,7 @@ async function callGeminiAPI(systemInstruction: string, prompt: string): Promise
 
   const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
   const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
+    model: 'gemini-2.5-pro',
     systemInstruction,
   });
 
@@ -128,6 +179,33 @@ async function callGeminiAPI(systemInstruction: string, prompt: string): Promise
       throw new AppError(`Gemini API error: ${error.message}`, 500, 'GEMINI_ERROR');
     }
     throw error;
+  }
+}
+
+function trimLogFile(filePath: string, maxEntries: number): void {
+  try {
+    if (!fs.existsSync(filePath)) return;
+
+    const content = fs.readFileSync(filePath, 'utf8');
+
+    // Find all request timestamps to identify entry boundaries
+    const requestPattern = /\[(\d{4}-\d{2}-\d{2}T[\d:.]+Z)\] GEMINI REQUEST/g;
+    const matches: { index: number }[] = [];
+
+    let match;
+    while ((match = requestPattern.exec(content)) !== null) {
+      matches.push({ index: match.index });
+    }
+
+    // If we have more entries than maxEntries, trim the file
+    if (matches.length > maxEntries) {
+      // Keep only the last maxEntries
+      const startIndex = matches[matches.length - maxEntries].index;
+      const trimmedContent = content.substring(startIndex);
+      fs.writeFileSync(filePath, trimmedContent, 'utf8');
+    }
+  } catch (error) {
+    logger.warn({ error }, 'Failed to trim log file');
   }
 }
 
@@ -162,7 +240,57 @@ export const analysisService = {
 
     const prompt = buildPrompt(aiConfig.promptTemplate, timeframe, formattedOHLC);
 
+    logger.info({
+      event: 'gemini.request',
+      systemInstruction: systemInstruction.substring(0, 500) + (systemInstruction.length > 500 ? '...' : ''),
+      promptPreview: prompt.substring(0, 1000) + (prompt.length > 1000 ? '...' : ''),
+      promptLength: prompt.length,
+      ohlcBarsCount: ohlcData.length,
+      timeframe,
+      symbol,
+    }, 'Sending request to Gemini AI');
+
+    // Write full request to debug file
+    const debugDir = path.join(process.cwd(), 'logs');
+    if (!fs.existsSync(debugDir)) {
+      fs.mkdirSync(debugDir, { recursive: true });
+    }
+    const debugFile = path.join(debugDir, 'gemini-debug.log');
+    const debugContent = `
+================================================================================
+[${new Date().toISOString()}] GEMINI REQUEST
+================================================================================
+
+=== SYSTEM INSTRUCTION ===
+${systemInstruction}
+
+=== PROMPT ===
+${prompt}
+
+================================================================================
+`;
+    fs.appendFileSync(debugFile, debugContent, 'utf8');
+
     const aiResponseText = await callGeminiAPI(systemInstruction, prompt);
+
+    logger.info({
+      event: 'gemini.response',
+      responsePreview: aiResponseText.substring(0, 500) + (aiResponseText.length > 500 ? '...' : ''),
+      responseLength: aiResponseText.length,
+    }, 'Received response from Gemini AI');
+
+    // Write full response to debug file
+    const responseDebug = `
+=== GEMINI RESPONSE ===
+${aiResponseText}
+
+================================================================================
+`;
+    fs.appendFileSync(debugFile, responseDebug, 'utf8');
+
+    // Keep only last 3 entries in log file
+    trimLogFile(debugFile, 3);
+
     const parsed = parseAIResponse(aiResponseText);
 
     const pointsToDeduct = parsed.hasEntry ? 1 : 0;

@@ -8,6 +8,7 @@ import { DashboardPage } from '@/pages/Dashboard';
 import { UsersPage } from '@/pages/Users';
 import { PointsPage } from '@/pages/Points';
 import { AIConfigPage } from '@/pages/AIConfig';
+import { HistoryPage } from '@/pages/History';
 
 function App() {
   const { checkAuth, isAuthenticated } = useAuthStore();
@@ -34,6 +35,7 @@ function App() {
           <Route path="/users" element={<UsersPage />} />
           <Route path="/points" element={<PointsPage />} />
           <Route path="/ai-config" element={<AIConfigPage />} />
+          <Route path="/history" element={<HistoryPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

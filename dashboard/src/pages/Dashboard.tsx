@@ -7,9 +7,20 @@ import { AnalysisHistory } from '@/components/AnalysisHistory';
 const TIMEFRAMES = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1'] as const;
 type Timeframe = typeof TIMEFRAMES[number];
 
+interface TradeLevels {
+  entry: number | null;
+  stopLoss: number | null;
+  takeProfit: number | null;
+}
+
 export function DashboardPage() {
   const { user, logout } = useAuthStore();
-  const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>('H1');
+  const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>('M15');
+  const [tradeLevels, setTradeLevels] = useState<TradeLevels>({
+    entry: null,
+    stopLoss: null,
+    takeProfit: null,
+  });
 
   return (
     <div className="min-h-screen bg-gray-900">
@@ -49,10 +60,22 @@ export function DashboardPage() {
         <ChartViewer
           selectedTimeframe={selectedTimeframe}
           onTimeframeChange={setSelectedTimeframe}
+          tradeLevels={tradeLevels}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <AnalysisPanel timeframe={selectedTimeframe} />
+          <AnalysisPanel
+            timeframe={selectedTimeframe}
+            onAnalysisComplete={(result) => {
+              if (result.hasEntry) {
+                setTradeLevels({
+                  entry: result.entry,
+                  stopLoss: result.stopLoss,
+                  takeProfit: result.takeProfit,
+                });
+              }
+            }}
+          />
           <AnalysisHistory />
         </div>
       </main>
